@@ -4,9 +4,15 @@ bundle:
 allowed_hosts:
   - github.com
   - azimuth-cloud.github.io
+  - raw.githubusercontent.com
 allowed_redirect_hosts:
   - release-assets.githubusercontent.com
 sources:
+  provider-dependencies:
+    version: 0.27.1
+    url: https://raw.githubusercontent.com/azimuth-cloud/capi-helm-charts/0.27.1/dependencies.json
+    sha256: dfb8d94584c2494a9b40b76932efcbcf3d9884bf7b4833dbf2d099d4c90b078b
+    file: metadata/dependencies.json
   capi-metadata:
     version: v1.13.3
     url: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.3/metadata.yaml
