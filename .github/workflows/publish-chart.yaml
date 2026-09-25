@@ -1,0 +1,86 @@
+name: Publish approved chart
+
+on:
+  workflow_dispatch:
+    inputs:
+      chart:
+        description: Approved chart identity
+        required: true
+        type: choice
+        options: [argo-cd, external-secrets, ingress-nginx, kro, kube-prometheus-stack, kyverno, velero]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  publish:
+    environment: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Install checksum-pinned tools
+        run: |
+          ./scripts/install-tools.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Build reviewed chart
+        env:
+          CHART: ${{ inputs.chart }}
+        run: |
+          python3 scripts/artifactctl.py validate
+          python3 scripts/artifactctl.py fetch-chart --name "$CHART" --output "$RUNNER_TEMP/chart.tgz"
+      - name: Publish once
+        id: publish
+        env:
+          CHART: ${{ inputs.chart }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh auth token | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          repository="oci://ghcr.io/rcs-csoc/csoc-charts"
+          version="$(yq -r ".charts.\"$CHART\".version" catalog/charts.yaml)"
+          publish_tag="$(yq -r ".charts.\"$CHART\".publish_tag // .charts.\"$CHART\".version" catalog/charts.yaml)"
+          expected="$(sha256sum "$RUNNER_TEMP/chart.tgz" | awk '{print $1}')"
+          mkdir "$RUNNER_TEMP/existing"
+          if output="$(helm pull "$repository/$CHART" --version "$publish_tag" --destination "$RUNNER_TEMP/existing" 2>&1)"; then
+            existing="$(find "$RUNNER_TEMP/existing" -type f -name '*.tgz' -print -quit)"
+            [[ -n "$existing" && "$(sha256sum "$existing" | awk '{print $1}')" == "$expected" ]]
+            digest="$(printf '%s\n' "$output" | awk '/Digest:/ {print $2}' | tail -1)"
+          else
+            output="$(helm push "$RUNNER_TEMP/chart.tgz" "$repository" 2>&1)"
+            digest="$(printf '%s\n' "$output" | awk '/Digest:/ {print $2}' | tail -1)"
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "subject=ghcr.io/rcs-csoc/csoc-charts/$CHART" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Attest OCI manifest
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-name: ${{ steps.publish.outputs.subject }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+      - name: Verify anonymous digest and emit candidate
+        env:
+          CHART: ${{ inputs.chart }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
+          SUBJECT: ${{ steps.publish.outputs.subject }}
+        run: |
+          set -euo pipefail
+          helm registry logout ghcr.io >/dev/null
+          if ! oras manifest fetch "$SUBJECT@$DIGEST" >/dev/null 2>&1; then
+            echo "GHCR package must be public before publication can complete" >&2
+            exit 1
+          fi
+          GITHUB_SHA="$(git rev-parse HEAD)" python3 scripts/artifactctl.py candidate \
+            --kind chart --name "$CHART" --digest "$DIGEST" \
+            --output "$RUNNER_TEMP/candidate-lock.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-${{ inputs.chart }}-${{ steps.publish.outputs.version }}
+          path: ${{ runner.temp }}/candidate-lock.json
+          retention-days: 14

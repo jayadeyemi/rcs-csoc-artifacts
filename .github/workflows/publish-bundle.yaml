@@ -1,0 +1,74 @@
+name: Publish approved bootstrap bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  publish:
+    environment: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Install checksum-pinned tools
+        run: |
+          ./scripts/install-tools.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Build deterministic reviewed bundle
+        run: |
+          python3 scripts/artifactctl.py validate
+          python3 scripts/artifactctl.py build-bundle --output "$RUNNER_TEMP/bootstrap-bundle.tgz"
+      - name: Publish once
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repository="ghcr.io/rcs-csoc/csoc-bootstrap-bundle"
+          version="$(yq -r '.bundle.version' catalog/bootstrap-bundle.yaml)"
+          gh auth token | oras login ghcr.io --username "${{ github.actor }}" --password-stdin
+          if digest="$(oras resolve "$repository:$version" 2>/dev/null)"; then
+            mkdir "$RUNNER_TEMP/existing"
+            oras pull "$repository@$digest" --output "$RUNNER_TEMP/existing"
+            cmp "$RUNNER_TEMP/bootstrap-bundle.tgz" "$RUNNER_TEMP/existing/bootstrap-bundle.tgz"
+          else
+            output="$(cd "$RUNNER_TEMP" && oras push "$repository:$version" \
+              --artifact-type application/vnd.rcs.bootstrap.bundle.v1 \
+              'bootstrap-bundle.tgz:application/vnd.rcs.bootstrap.bundle.v1+gzip')"
+            digest="$(printf '%s\n' "$output" | awk '/Digest:/ {print $2}' | tail -1)"
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "subject=$repository" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Attest OCI manifest
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-name: ${{ steps.publish.outputs.subject }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+      - name: Verify anonymous digest and emit candidate
+        env:
+          DIGEST: ${{ steps.publish.outputs.digest }}
+          SUBJECT: ${{ steps.publish.outputs.subject }}
+        run: |
+          set -euo pipefail
+          oras logout ghcr.io
+          if ! oras manifest fetch "$SUBJECT@$DIGEST" >/dev/null 2>&1; then
+            echo "GHCR package must be public before publication can complete" >&2
+            exit 1
+          fi
+          GITHUB_SHA="$(git rev-parse HEAD)" python3 scripts/artifactctl.py candidate \
+            --kind bundle --digest "$DIGEST" --output "$RUNNER_TEMP/candidate-lock.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-bootstrap-bundle-${{ steps.publish.outputs.version }}
+          path: ${{ runner.temp }}/candidate-lock.json
+          retention-days: 14

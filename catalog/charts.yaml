@@ -1,0 +1,52 @@
+schema_version: 1
+allowed_hosts:
+  - github.com
+  - registry.k8s.io
+  - kyverno.github.io
+allowed_redirect_hosts:
+  - release-assets.githubusercontent.com
+charts:
+  argo-cd:
+    version: 10.4.0
+    source_url: https://github.com/argoproj/argo-helm/releases/download/argo-cd-10.4.0/argo-cd-10.4.0.tgz
+    source_sha256: 5abb71c17bc082e13dc3d90023972f871ea8e1dfc26d8f3218ceade215b971d5
+    expected_name: argo-cd
+    expected_version: 10.4.0
+  external-secrets:
+    version: 2.10.0
+    source_url: https://github.com/external-secrets/external-secrets/releases/download/helm-chart-2.10.0/external-secrets-2.10.0.tgz
+    source_sha256: b96e948fff3674638b5d3f9e43886f3796e04739c4b4127929aed2ddac7d1418
+    expected_name: external-secrets
+    expected_version: 2.10.0
+  ingress-nginx:
+    version: 4.15.1
+    source_url: https://github.com/kubernetes/ingress-nginx/releases/download/helm-chart-4.15.1/ingress-nginx-4.15.1.tgz
+    source_sha256: 3eff0bd18151d6e6b1c441463410571443dda1ac78292cb189346628de784f0c
+    expected_name: ingress-nginx
+    expected_version: 4.15.1
+  kro:
+    version: 0.9.3
+    source_tag: 0.9.3
+    publish_tag: v0.9.3
+    source_url: oci://registry.k8s.io/kro/charts/kro
+    source_sha256: 721041255e9713cd645d003a94a63a094cbf8ea66a8ffb19f12a63e55eb65102
+    expected_name: kro
+    expected_version: v0.9.3
+  kube-prometheus-stack:
+    version: 91.4.1
+    source_url: https://github.com/prometheus-community/helm-charts/releases/download/kube-prometheus-stack-91.4.1/kube-prometheus-stack-91.4.1.tgz
+    source_sha256: 1bd5e7a88e758ed3ec22db0fe6e72b1352f3f0e7e5a93c79979f7edf361becdb
+    expected_name: kube-prometheus-stack
+    expected_version: 91.4.1
+  kyverno:
+    version: 3.9.1
+    source_url: https://kyverno.github.io/kyverno/kyverno-3.9.1.tgz
+    source_sha256: 7b7fe51a431b5b133b0ce7eb9dcb222b6a37fb967c163223cf480054ad14d752
+    expected_name: kyverno
+    expected_version: 3.9.1
+  velero:
+    version: 12.1.0
+    source_url: https://github.com/vmware-tanzu/helm-charts/releases/download/velero-12.1.0/velero-12.1.0.tgz
+    source_sha256: cd23589ad1b2d25cdd3220f6866b3f6f4c5683c4c09494e76a14700b33f81f83
+    expected_name: velero
+    expected_version: 12.1.0

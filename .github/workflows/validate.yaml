@@ -1,0 +1,31 @@
+name: Validate artifact catalog
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install checksum-pinned tools
+        run: |
+          ./scripts/install-tools.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Validate catalogs and deterministic bundle
+        run: |
+          make validate
+          mkdir -p .out/first .out/second
+          python3 scripts/artifactctl.py build-bundle --output .out/first/bootstrap-bundle.tgz
+          python3 scripts/artifactctl.py build-bundle --output .out/second/bootstrap-bundle.tgz
+          cmp .out/first/bootstrap-bundle.tgz .out/second/bootstrap-bundle.tgz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bootstrap-bundle-review
+          path: .out/first/bootstrap-bundle.tgz
+          retention-days: 14
