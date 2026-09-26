@@ -34,12 +34,17 @@ jobs:
             exit 0
           fi
           branch=automation/upstream-discovery
+          remote_sha="$(git ls-remote --heads origin "$branch" | awk '{print $1}')"
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git checkout -B "$branch"
           git add catalog THIRD_PARTY_NOTICES.md
           git commit -m 'Propose reviewed upstream artifact updates'
-          git push --force-with-lease origin "$branch"
+          if [[ -n "$remote_sha" ]]; then
+            git push --force-with-lease="refs/heads/$branch:$remote_sha" origin "$branch"
+          else
+            git push --set-upstream origin "$branch"
+          fi
           if ! gh pr view "$branch" >/dev/null 2>&1; then
             gh pr create --base main --head "$branch" \
               --title 'Update reviewed upstream artifact catalog' \
