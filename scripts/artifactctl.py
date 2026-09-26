@@ -30,6 +30,7 @@ SECRET_PATTERNS = {
         rb"application_credential_secret\s*:\s*['\"]?[A-Za-z0-9_+/=-]{16,}"),
     "Kubernetes private key": re.compile(rb"client-key-data\s*:\s*[A-Za-z0-9+/=]{80,}"),
 }
+APPROVED_LICENSES = {"Apache-2.0"}
 
 
 class ArtifactError(RuntimeError):
@@ -109,6 +110,8 @@ def validate_catalogs(charts_path: Path = CHARTS, bundle_path: Path = BUNDLE) ->
         if item.get("expected_name") != name or not VERSION.fullmatch(
                 str(item.get("expected_version", ""))):
             raise ArtifactError(f"invalid expected chart metadata: {name}")
+        if item.get("license") not in APPROVED_LICENSES:
+            raise ArtifactError(f"missing or unapproved redistribution license: {name}")
         identity = (url, str(item["version"]))
         if identity in seen_sources:
             raise ArtifactError(f"duplicate chart source identity: {name}")
@@ -128,6 +131,8 @@ def validate_catalogs(charts_path: Path = CHARTS, bundle_path: Path = BUNDLE) ->
             raise ArtifactError(f"invalid bundle checksum: {name}")
         if not VERSION.fullmatch(str(item.get("version", ""))):
             raise ArtifactError(f"invalid bundle source version: {name}")
+        if item.get("license") not in APPROVED_LICENSES:
+            raise ArtifactError(f"missing or unapproved redistribution license: {name}")
         path = PurePosixPath(destination)
         if (not SAFE_PATH.fullmatch(destination) or path.is_absolute() or ".." in path.parts or
                 destination in destinations):
@@ -232,6 +237,18 @@ def normalized_tar(directory: Path, output: Path) -> None:
                     archive.addfile(info, io.BytesIO(content))
 
 
+def third_party_notices() -> str:
+    """Return the deterministic attribution inventory for every mirrored input."""
+    validate_catalogs()
+    lines = ["# Third-party software", "", "The artifacts mirror these upstream inputs:", ""]
+    for name, item in sorted(load_yaml(CHARTS)["charts"].items()):
+        lines.append(f"- {name} {item['version']} — {item['license']} — {item['source_url']}")
+    for name, item in sorted(load_yaml(BUNDLE)["sources"].items()):
+        lines.append(f"- {name} {item['version']} — {item['license']} — {item['url']}")
+    lines.extend(["", "The corresponding license text is in LICENSE.", ""])
+    return "\n".join(lines)
+
+
 def build_bundle(output: Path) -> dict:
     validate_catalogs()
     catalog = load_yaml(BUNDLE)
@@ -250,6 +267,8 @@ def build_bundle(output: Path) -> dict:
             if destination.suffix == ".tgz":
                 scan_archive(destination)
         shutil.copyfile(BUNDLE, root / "sources.yaml")
+        (root / "THIRD_PARTY_NOTICES.md").write_text(third_party_notices())
+        shutil.copyfile(ROOT / "LICENSE", root / "LICENSE")
         files = []
         for path in sorted(root.rglob("*")):
             if path.is_file():
@@ -277,15 +296,15 @@ def candidate(kind: str, name: str | None, digest: str, output: Path) -> None:
         if not item:
             raise ArtifactError("unknown chart")
         document = {name: {"version": item["version"],
-            "repository": f"oci://ghcr.io/rcs-csoc/csoc-charts/{name}", "digest": digest,
-            "publisher_repository": "rcs-csoc/rcs-csoc-artifacts",
+            "repository": f"oci://ghcr.io/jayadeyemi/csoc-public-charts/{name}", "digest": digest,
+            "publisher_repository": "jayadeyemi/rcs-csoc-artifacts",
             "publisher_revision": commit, "source_catalog": "catalog/charts.yaml",
             "source_catalog_sha256": catalog_sha(CHARTS)}}
     else:
         item = load_yaml(BUNDLE)
         document = {"bootstrap_bundle": {"version": item["bundle"]["version"],
-            "repository": "ghcr.io/rcs-csoc/csoc-bootstrap-bundle", "digest": digest,
-            "publisher_repository": "rcs-csoc/rcs-csoc-artifacts",
+            "repository": "ghcr.io/jayadeyemi/csoc-public-bootstrap-bundle", "digest": digest,
+            "publisher_repository": "jayadeyemi/rcs-csoc-artifacts",
             "publisher_revision": commit, "source_catalog": "catalog/bootstrap-bundle.yaml",
             "source_catalog_sha256": catalog_sha(BUNDLE)}}
     output.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
@@ -305,6 +324,8 @@ def main() -> None:
     lock.add_argument("--name")
     lock.add_argument("--digest", required=True)
     lock.add_argument("--output", type=Path, required=True)
+    notices = sub.add_parser("notices")
+    notices.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "validate":
@@ -314,8 +335,10 @@ def main() -> None:
             fetch_chart(args.name, args.output)
         elif args.command == "build-bundle":
             build_bundle(args.output)
-        else:
+        elif args.command == "candidate":
             candidate(args.kind, args.name, args.digest, args.output)
+        else:
+            args.output.write_text(third_party_notices())
     except (ArtifactError, OSError, subprocess.CalledProcessError) as exc:
         parser.error(str(exc))
 

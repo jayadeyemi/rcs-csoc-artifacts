@@ -14,6 +14,10 @@ jobs:
     environment: publish
     runs-on: ubuntu-latest
     steps:
+      - name: Require configured trusted reviewer
+        env:
+          REVIEWER_CONFIGURED: ${{ vars.TRUSTED_REVIEWER_CONFIGURED }}
+        run: test "$REVIEWER_CONFIGURED" = true
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: ${{ github.event.repository.default_branch }}
@@ -40,7 +44,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          repository="ghcr.io/rcs-csoc/csoc-bootstrap-bundle"
+          repository="ghcr.io/jayadeyemi/csoc-public-bootstrap-bundle"
           version="$(yq -r '.bundle.version' catalog/bootstrap-bundle.yaml)"
           gh auth token | oras login ghcr.io --username "${{ github.actor }}" --password-stdin
           if digest="$(oras resolve "$repository:$version" 2>/dev/null)"; then

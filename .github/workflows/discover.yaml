@@ -1,0 +1,49 @@
+name: Discover upstream updates
+
+on:
+  schedule:
+    - cron: '17 13 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Install checksum-pinned tools
+        run: |
+          ./scripts/install-tools.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Discover and validate candidates
+        run: |
+          python3 scripts/discover.py
+          make validate
+      - name: Open or refresh candidate pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- catalog THIRD_PARTY_NOTICES.md; then
+            echo "No catalog update"
+            exit 0
+          fi
+          branch=automation/upstream-discovery
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git checkout -B "$branch"
+          git add catalog THIRD_PARTY_NOTICES.md
+          git commit -m 'Propose reviewed upstream artifact updates'
+          git push --force-with-lease origin "$branch"
+          if ! gh pr view "$branch" >/dev/null 2>&1; then
+            gh pr create --base main --head "$branch" \
+              --title 'Update reviewed upstream artifact catalog' \
+              --body-file .out/discovery-summary.md
+          else
+            gh pr edit "$branch" --body-file .out/discovery-summary.md
+          fi

@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("artifactctl", ROOT / "scripts/artifactctl.py")
 ARTIFACTCTL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(ARTIFACTCTL)
+DISCOVERY_SPEC = importlib.util.spec_from_file_location("discovery", ROOT / "scripts/discover.py")
+DISCOVERY = importlib.util.module_from_spec(DISCOVERY_SPEC)
+DISCOVERY_SPEC.loader.exec_module(DISCOVERY)
 
 
 class CatalogTests(unittest.TestCase):
@@ -38,6 +41,25 @@ class CatalogTests(unittest.TestCase):
         changed = copy.deepcopy(self.bundle)
         changed["sources"]["capi-core"]["sha256"] = "bad"
         self.rejected(bundle=changed)
+
+    def test_missing_redistribution_license_is_rejected(self):
+        changed = copy.deepcopy(self.charts)
+        del changed["charts"]["argo-cd"]["license"]
+        self.rejected(charts=changed)
+
+    def test_attribution_covers_every_catalog_entry(self):
+        notices = ARTIFACTCTL.third_party_notices()
+        for name in self.charts["charts"] | self.bundle["sources"]:
+            self.assertIn(f"- {name} ", notices)
+
+    def test_discovery_uses_numeric_versions(self):
+        self.assertGreater(DISCOVERY.numeric("v10.1.0"), DISCOVERY.numeric("9.20.0"))
+
+    def test_discovery_cannot_publish_or_merge(self):
+        workflow = (ROOT / ".github/workflows/discover.yaml").read_text()
+        self.assertNotIn("packages: write", workflow)
+        self.assertNotIn("gh pr merge", workflow)
+        self.assertNotIn("oras push", workflow)
 
     def test_duplicate_bundle_destination_is_rejected(self):
         changed = copy.deepcopy(self.bundle)

@@ -13,53 +13,64 @@ sources:
     url: https://raw.githubusercontent.com/azimuth-cloud/capi-helm-charts/0.27.1/dependencies.json
     sha256: dfb8d94584c2494a9b40b76932efcbcf3d9884bf7b4833dbf2d099d4c90b078b
     file: metadata/dependencies.json
+    license: Apache-2.0
   capi-metadata:
     version: v1.13.3
     url: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.3/metadata.yaml
     sha256: 20ffd682bfc50ab5193aa14ba55222ba390f9204ccf6a0dd2d52c4a3c4fb004f
     file: metadata/cluster-api.yaml
+    license: Apache-2.0
   capi-core:
     version: v1.13.3
     url: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.3/core-components.yaml
     sha256: ea2f313c13e514013b021675ac19c2a99a02d5520615b7c8791dcd51de4a955d
     file: providers/capi-core.yaml
+    license: Apache-2.0
   kubeadm-bootstrap:
     version: v1.13.3
     url: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.3/bootstrap-components.yaml
     sha256: 4e396c30e6357f73ab2de84f4fb634b18de0210e2b722f8fa4629dd51139aa40
     file: providers/kubeadm-bootstrap.yaml
+    license: Apache-2.0
   kubeadm-control-plane:
     version: v1.13.3
     url: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.3/control-plane-components.yaml
     sha256: 4c5afbdaa25726b5568a0cc6ed804f9eb55c14567e2f5e5fe28d8ad1bac4f1d4
     file: providers/kubeadm-control-plane.yaml
+    license: Apache-2.0
   capo:
     version: v0.14.6
     url: https://github.com/kubernetes-sigs/cluster-api-provider-openstack/releases/download/v0.14.6/infrastructure-components.yaml
     sha256: 123423f8ef8657f101cd086171f517e862b3fc04fa6a1f2f8e9fda7c1d9efac4
     file: providers/capo.yaml
+    license: Apache-2.0
   capo-metadata:
     version: v0.14.6
     url: https://github.com/kubernetes-sigs/cluster-api-provider-openstack/releases/download/v0.14.6/metadata.yaml
     sha256: 2c1d791168a7dc4ca13cfa3d19acd186f39a51a02f5f1967c857c6e0a01cbddc
     file: metadata/cluster-api-provider-openstack.yaml
+    license: Apache-2.0
   cert-manager:
     version: v1.20.3
     url: https://github.com/cert-manager/cert-manager/releases/download/v1.20.3/cert-manager.yaml
     sha256: 7ee74ba06845213e96d8ceaff3d20dd51e682765c1418eddda4e8780ba082261
     file: providers/cert-manager.yaml
+    license: Apache-2.0
   openstack-resource-controller:
     version: v2.6.0
     url: https://github.com/k-orc/openstack-resource-controller/releases/download/v2.6.0/install.yaml
     sha256: affe57ece8c81001d4dacd35fe3bd5bf35662ed6b5c4b1da59f334c685bba109
     file: providers/openstack-resource-controller.yaml
+    license: Apache-2.0
   addon-provider:
     version: 0.12.1
     url: https://azimuth-cloud.github.io/cluster-api-addon-provider/cluster-api-addon-provider-0.12.1.tgz
     sha256: 8c4b5c4c9914b41dc8fba0455fed17006aa907fb68fdac1a2d1e24a4201e8309
     file: providers/addon-provider.tgz
+    license: Apache-2.0
   openstack-cluster:
     version: 0.27.1
     url: https://azimuth-cloud.github.io/capi-helm-charts/openstack-cluster-0.27.1.tgz
     sha256: b8e6ad967d1adef3fd998fd94c80bdc16fe64682410530da5765f73ddee50722
     file: charts/openstack-cluster.tgz
+    license: Apache-2.0

@@ -4,6 +4,8 @@ PYTHON ?= python3
 
 validate:
 	$(PYTHON) scripts/artifactctl.py validate
+	$(PYTHON) scripts/artifactctl.py notices --output THIRD_PARTY_NOTICES.md
+	git diff --exit-code -- THIRD_PARTY_NOTICES.md
 	$(PYTHON) -m unittest discover -s tests -v
 
 bundle:
