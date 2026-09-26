@@ -54,6 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           gh auth token | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          gh auth token | oras login ghcr.io --username "${{ github.actor }}" --password-stdin
           repository="oci://ghcr.io/jayadeyemi/csoc-public-charts"
           version="$(yq -r ".charts.\"$CHART\".version" catalog/charts.yaml)"
           publish_tag="$(yq -r ".charts.\"$CHART\".publish_tag // .charts.\"$CHART\".version" catalog/charts.yaml)"
@@ -85,6 +86,7 @@ jobs:
         run: |
           set -euo pipefail
           helm registry logout ghcr.io >/dev/null
+          oras logout ghcr.io
           if ! oras manifest fetch "$SUBJECT@$DIGEST" >/dev/null 2>&1; then
             echo "GHCR package must be public before publication can complete" >&2
             exit 1
