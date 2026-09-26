@@ -23,9 +23,10 @@ inputs retain their upstream licenses.
 2. A maintainer reviews metadata, checksums, licenses, and rendered differences,
    then merges through protected `main`.
 3. A maintainer manually dispatches publication from the exact `main` commit.
-4. The protected `publish` environment requires a trusted reviewer and prevents
-   self-review. Workflows also fail closed until the environment variable
-   `TRUSTED_REVIEWER_CONFIGURED` is explicitly set to `true` after that setup.
+4. The protected `publish` environment has an explicit `PUBLICATION_ENABLED`
+   circuit breaker. Publication is solo-controlled until a trusted reviewer is
+   available; adding a reviewer and preventing self-review is the preferred
+   future control.
 5. A new package is inspected while private, then explicitly made public. Public
    visibility is treated as permanent.
 6. The same workflow is rerun. It accepts only byte-identical content, verifies
@@ -42,8 +43,8 @@ Run `make validate` for catalog, attribution, and unit validation. Run
 ## Account continuity
 
 The owner maintains phishing-resistant 2FA, securely backed-up recovery codes,
-and periodic reviews of sessions and authorized applications. A trusted
-collaborator retains recovery access and publication-review responsibility. For
-an ownership change, verify the successor before removing the prior owner,
+and periodic reviews of sessions and authorized applications. Until a trusted
+collaborator is available, recovery codes are the independent recovery path and
+publication remains manually dispatched. For an ownership change, verify the successor before removing the prior owner,
 rotate recovery methods, review Actions and package permissions, and verify an
 unchanged artifact publication before resuming updates.

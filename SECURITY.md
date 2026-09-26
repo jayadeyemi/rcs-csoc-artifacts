@@ -17,8 +17,9 @@ the OCI digest, publisher repository and commit, signer workflow, catalog
 digest, and internal bundle checksums.
 
 The owner uses phishing-resistant 2FA and protected recovery codes. The
-`publish` environment requires a trusted reviewer with self-review disabled.
-No publication secret exists: workflows use the short-lived repository
+`publish` environment uses an explicit enablement circuit breaker and exact-main
+dispatch. A trusted reviewer with self-review disabled should be added when one
+is available. No publication secret exists: workflows use the short-lived repository
 `GITHUB_TOKEN` and GitHub OIDC provenance. Replace a compromised artifact with
 a new version, adopt it through reviewed consumer locks, verify adoption, and
 only then consider the old version for retirement.
