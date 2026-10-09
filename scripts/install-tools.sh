@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Install the pinned local artifact toolchain into the requested directory.
 set -euo pipefail
 
 destination="${1:?tool destination required}"
